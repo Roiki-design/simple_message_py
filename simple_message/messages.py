@@ -129,6 +129,7 @@ PingBody = c2.Struct(
 
 Ping = c2.Struct(
     'Ping',
+    Header,
     c2.Rename('body', PingBody),
     c2.Terminator
 )
