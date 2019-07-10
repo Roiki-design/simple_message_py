@@ -56,7 +56,7 @@ def CommTypeEnum(subcon):
         TOPIC=smc.TOPIC,
         SERVICE_REQUEST=smc.SERVICE_REQUEST,
         SERVICE_REPLY=smc.SERVICE_REPLY,
-        _default_=Pass #@UndefinedVariable
+        _default_=Pass
     )
 
 
@@ -76,18 +76,17 @@ def ReplyTypeEnum(subcon):
 PktLen = SM_Integer
 
 Header = c2.Struct(
-    'header',
     #MsgTypeEnum(SM_Integer('msg_type')),
     #CommTypeEnum(SM_Integer('comm_type')),
     #ReplyTypeEnum(SM_Integer('reply_type')),
-    SM_Integer("msg_type"),
-    SM_Integer('comm_type'),
-    SM_Integer('reply_type'),
+    'msg_type' / SM_Integer ,
+    'comm_type' / SM_Integer,
+    'reply_type' / SM_Integer,
 )
 
 
-def JointData(name, num):
-    return c2.Array(num, SM_Float(name))
+def JointData(num, name):
+    return c2.Array(num, name)
 
 SequenceNumber = SM_Integer
 
@@ -96,71 +95,63 @@ TriState = SM_Integer
 Time = SM_Float
 
 ValidFields = c2.BitStruct(
-    'ValidFields',
-    c2.Flag('time'),
-    c2.Flag('position'),
-    c2.Flag('velocity'),
-    c2.Flag('acceleration'),
-    c2.BitsInteger('reserved', 28),
+    'time' / c2.Flag,
+    'position' /  c2.Flag,
+    'velocity' / c2.Flag,
+    'accelerations' / c2.Flag,
+    'reserved' / c2.BitsInteger(28)
 )
 
 
 GenericBody = c2.Struct(
-    'GenericBody',
     # use optional here, as body may be zero-length
-    c2.GreedyRange(c2.Int8ub('data')),
+    c2.GreedyRange('data' / c2.Int8ub)
 )
 
-GenericBody = c2.GreedyRange(c2.Int8ub('data'))
+GenericBody = c2.GreedyRange('data' / c2.Int8ub)
 
 # generic simple message
 GenericMessage = c2.Struct(
-    'GenericMessage',
     Header,
-    c2.Renamed('body', GenericBody),
+    'body' / c2.Renamed(GenericBody),
     c2.Terminated
 )
 
 
 PingBody = c2.Struct(
-    'PingBody',
-    JointData('joint_data', 10)
+    'joint_data'/ JointData(10, 'joint_data')
 )
 
 Ping = c2.Struct(
-    'Ping',
     Header,
-    c2.Renamed('body', PingBody),
+    'body' / c2.Renamed(PingBody),
     c2.Terminated
 )
 
 
 JointPositionBody = c2.Struct(
-    'JointPositionBody',
-    SequenceNumber('seq_nr'),
-    JointData('joint_data', 10),
+    'seq_nr' / SequenceNumber,
+    'joint_data'/ JointData('joint_data', 10)
 )
 
 JointPosition = c2.Struct(
     'JointPosition',
     Header,
-    c2.Renamed('body', JointPositionBody),
+    'body' / c2.Renamed(JointPositionBody),
     c2.Terminated
 )
 
 
 JointTrajectoryPointBody = c2.Struct(
-    'JointTrajectoryPointBody',
-    SequenceNumber('seq_nr'),
-    JointData('joint_data', 10),
-    SM_Float('velocity'),
-    SM_Float('duration'),
+    'seq_nr' / SequenceNumber,
+    'joint_data'/ JointData('joint_data', 10),
+    'velocity' / SM_Float,
+    'duration' / SM_Float,
 )
 
 JointTrajectoryPoint = c2.Struct(
-    'JointTrajectoryPoint',
     Header,
-    c2.Renamed('body', JointTrajectoryPointBody),
+    'body' / c2.Renamed(JointTrajectoryBody),
     c2.Terminated
 )
 
@@ -179,7 +170,7 @@ RobotStatusBody = c2.Struct(
 RobotStatus = c2.Struct(
     'RobotStatus',
     Header,
-    c2.Renamed('body', RobotStatusBody),
+    'body' / c2.Renamed(RobotStatusBody),
     c2.Terminated
 )
 
@@ -198,7 +189,7 @@ JointTrajectoryPointFullBody = c2.Struct(
 JointTrajectoryPointFull = c2.Struct(
     'JointTrajectoryPointFull',
     Header,
-    c2.Renamed('body', JointTrajectoryPointFullBody),
+    'body' / c2.Renamed(JointTrajectoryPointFullBody),
     c2.Terminated
 )
 
@@ -206,7 +197,7 @@ JointTrajectoryPointFull = c2.Struct(
 JointFeedbackBody = c2.Struct(
     'JointFeedbackBody',
     SM_Integer('robot_id'),
-    c2.Renamed('valid_fields', ValidFields),
+    'valid_fields'/ ValidFields,
     Time('time'),
     JointData('positions', 10),
     JointData('velocities', 10),
@@ -214,9 +205,8 @@ JointFeedbackBody = c2.Struct(
 )
 
 JointFeedback = c2.Struct(
-    'JointFeedback',
     Header,
-    c2.Renamed('body', JointFeedbackBody),
+    'body' / c2.Renamed(JointFeedbackBody),
     c2.Terminated
 )
 
@@ -236,7 +226,6 @@ msg_type_body_map = {
 
 
 SimpleMessage = c2.Struct(
-    'SimpleMessage',
     Header,
     c2.Switch(
         'body',
