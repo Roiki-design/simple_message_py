@@ -17,7 +17,7 @@
 #       part of these message structures
 
 
-from . constants import \
+from .constants import \
     StandardMsgTypes as smt, \
     CommTypes        as smc, \
     ReplyTypes       as smr
@@ -28,9 +28,9 @@ import construct as c2
 
 
 # TODO: deal with little- and big-endian switching
-SM_Bool = c2.SLInt32
-SM_Float = c2.LFloat32
-SM_Integer = c2.SLInt32
+SM_Bool = c2.Int32sl
+SM_Float = c2.Float32l
+SM_Integer = c2.Int32sl
 
 
 
@@ -46,7 +46,7 @@ def MsgTypeEnum(subcon):
         STATUS=smt.STATUS,
         JOINT_TRAJ_PT_FULL=smt.JOINT_TRAJ_PT_FULL,
         JOINT_FEEDBACK=smt.JOINT_FEEDBACK,
-        _default_=Pass
+        _default_=Pass #@UndefinedVariable
     )
 
 
@@ -56,7 +56,7 @@ def CommTypeEnum(subcon):
         TOPIC=smc.TOPIC,
         SERVICE_REQUEST=smc.SERVICE_REQUEST,
         SERVICE_REPLY=smc.SERVICE_REPLY,
-        _default_=Pass
+        _default_=Pass #@UndefinedVariable
     )
 
 
@@ -80,7 +80,7 @@ Header = c2.Struct(
     #MsgTypeEnum(SM_Integer('msg_type')),
     #CommTypeEnum(SM_Integer('comm_type')),
     #ReplyTypeEnum(SM_Integer('reply_type')),
-    SM_Integer('msg_type'),
+    SM_Integer("msg_type"),
     SM_Integer('comm_type'),
     SM_Integer('reply_type'),
 )
@@ -101,24 +101,24 @@ ValidFields = c2.BitStruct(
     c2.Flag('position'),
     c2.Flag('velocity'),
     c2.Flag('acceleration'),
-    c2.BitField('reserved', 28),
+    c2.BitsInteger('reserved', 28),
 )
 
 
 GenericBody = c2.Struct(
     'GenericBody',
     # use optional here, as body may be zero-length
-    c2.OptionalGreedyRange(c2.UBInt8('data')),
+    c2.GreedyRange(c2.Int8ub('data')),
 )
 
-GenericBody = c2.OptionalGreedyRange(c2.UBInt8('data'))
+GenericBody = c2.GreedyRange(c2.Int8ub('data'))
 
 # generic simple message
 GenericMessage = c2.Struct(
     'GenericMessage',
     Header,
-    c2.Rename('body', GenericBody),
-    c2.Terminator
+    c2.Renamed('body', GenericBody),
+    c2.Terminated
 )
 
 
@@ -130,8 +130,8 @@ PingBody = c2.Struct(
 Ping = c2.Struct(
     'Ping',
     Header,
-    c2.Rename('body', PingBody),
-    c2.Terminator
+    c2.Renamed('body', PingBody),
+    c2.Terminated
 )
 
 
@@ -144,8 +144,8 @@ JointPositionBody = c2.Struct(
 JointPosition = c2.Struct(
     'JointPosition',
     Header,
-    c2.Rename('body', JointPositionBody),
-    c2.Terminator
+    c2.Renamed('body', JointPositionBody),
+    c2.Terminated
 )
 
 
@@ -160,8 +160,8 @@ JointTrajectoryPointBody = c2.Struct(
 JointTrajectoryPoint = c2.Struct(
     'JointTrajectoryPoint',
     Header,
-    c2.Rename('body', JointTrajectoryPointBody),
-    c2.Terminator
+    c2.Renamed('body', JointTrajectoryPointBody),
+    c2.Terminated
 )
 
 
@@ -179,8 +179,8 @@ RobotStatusBody = c2.Struct(
 RobotStatus = c2.Struct(
     'RobotStatus',
     Header,
-    c2.Rename('body', RobotStatusBody),
-    c2.Terminator
+    c2.Renamed('body', RobotStatusBody),
+    c2.Terminated
 )
 
 
@@ -188,7 +188,7 @@ JointTrajectoryPointFullBody = c2.Struct(
     'JointTrajectoryPointFullBody',
     SM_Integer('robot_id'),
     SequenceNumber('seq_nr'),
-    c2.Rename('valid_fields', ValidFields),
+    c2.Renamed('valid_fields', ValidFields),
     Time('time'),
     JointData('positions', 10),
     JointData('velocities', 10),
@@ -198,15 +198,15 @@ JointTrajectoryPointFullBody = c2.Struct(
 JointTrajectoryPointFull = c2.Struct(
     'JointTrajectoryPointFull',
     Header,
-    c2.Rename('body', JointTrajectoryPointFullBody),
-    c2.Terminator
+    c2.Renamed('body', JointTrajectoryPointFullBody),
+    c2.Terminated
 )
 
 
 JointFeedbackBody = c2.Struct(
     'JointFeedbackBody',
     SM_Integer('robot_id'),
-    c2.Rename('valid_fields', ValidFields),
+    c2.Renamed('valid_fields', ValidFields),
     Time('time'),
     JointData('positions', 10),
     JointData('velocities', 10),
@@ -216,8 +216,8 @@ JointFeedbackBody = c2.Struct(
 JointFeedback = c2.Struct(
     'JointFeedback',
     Header,
-    c2.Rename('body', JointFeedbackBody),
-    c2.Terminator
+    c2.Renamed('body', JointFeedbackBody),
+    c2.Terminated
 )
 
 
@@ -244,5 +244,5 @@ SimpleMessage = c2.Struct(
         msg_type_body_map,
         default = GenericBody
     ),
-    c2.Terminator
+    c2.Terminated
 )
