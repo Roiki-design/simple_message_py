@@ -107,7 +107,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         if self._state == self._S_MSG_RCVD:
             self._dispatchMsg()
 
-    _LEN_PKT_LEN = sm.PktLen(None).sizeof()
+    _LEN_PKT_LEN = sm.PktLen.sizeof()
 
     def _consumePktLen(self):
         if (len(self._remainingData) < self._LEN_PKT_LEN):

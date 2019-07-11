@@ -46,7 +46,7 @@ def MsgTypeEnum(subcon):
         STATUS=smt.STATUS,
         JOINT_TRAJ_PT_FULL=smt.JOINT_TRAJ_PT_FULL,
         JOINT_FEEDBACK=smt.JOINT_FEEDBACK,
-        _default_=Pass #@UndefinedVariable
+        _default_=Pass
     )
 
 
@@ -85,8 +85,8 @@ Header = c2.Struct(
 )
 
 
-def JointData(num, name):
-    return c2.Array(num, name)
+def JointData(num):
+    return  c2.Float32l[num]
 
 SequenceNumber = SM_Integer
 
@@ -119,7 +119,7 @@ GenericMessage = c2.Struct(
 
 
 PingBody = c2.Struct(
-    'joint_data'/ JointData(10, 'joint_data')
+    'joint_data'/ JointData(10)
 )
 
 Ping = c2.Struct(
@@ -130,12 +130,11 @@ Ping = c2.Struct(
 
 
 JointPositionBody = c2.Struct(
-    'seq_nr' / SequenceNumber,
-    'joint_data'/ JointData('joint_data', 10)
+    'seq_nr' / SequenceNumber ,
+    'joint_data'/ JointData(10)
 )
 
 JointPosition = c2.Struct(
-    'JointPosition',
     Header,
     'body' / c2.Renamed(JointPositionBody),
     c2.Terminated
@@ -143,51 +142,47 @@ JointPosition = c2.Struct(
 
 
 JointTrajectoryPointBody = c2.Struct(
-    'seq_nr' / SequenceNumber,
-    'joint_data'/ JointData('joint_data', 10),
+    'seq_nr' / SequenceNumber ,
+    'joint_data'/  JointData(10),
     'velocity' / SM_Float,
     'duration' / SM_Float,
 )
 
 JointTrajectoryPoint = c2.Struct(
     Header,
-    'body' / c2.Renamed(JointTrajectoryBody),
+    'body' / c2.Renamed(JointTrajectoryPointBody),
     c2.Terminated
 )
 
 
 RobotStatusBody = c2.Struct(
-    'RobotStatusBody',
-    TriState('drives_powered'),
-    TriState('e_stopped'),
-    SM_Integer('error_code'),
-    TriState('in_error'),
-    TriState('in_motion'),
-    TriState('mode'),
-    TriState('motion_possible'),
+    'drives_powered' / TriState,
+    'e_stopped' / TriState,
+    'error_code' / SM_Integer,
+    'in_error' / TriState,
+    'in_motion' / TriState,
+    'mode' / TriState,
+    'motion_possible' / TriState
 )
 
 RobotStatus = c2.Struct(
-    'RobotStatus',
     Header,
     'body' / c2.Renamed(RobotStatusBody),
-    c2.Terminated
+    c2.Terminated,
 )
 
 
 JointTrajectoryPointFullBody = c2.Struct(
-    'JointTrajectoryPointFullBody',
-    SM_Integer('robot_id'),
-    SequenceNumber('seq_nr'),
-    c2.Renamed('valid_fields', ValidFields),
-    Time('time'),
-    JointData('positions', 10),
-    JointData('velocities', 10),
-    JointData('accelerations', 10),
+    'robot_id' / SM_Integer,
+    'seq_nr' / SequenceNumber ,
+    'valid_fields' / c2.Renamed(ValidFields),
+    'time' / Time,
+    'positions' / JointData( 10),
+    'velocities' / JointData( 10),
+    'accelerations' / JointData( 10),
 )
 
 JointTrajectoryPointFull = c2.Struct(
-    'JointTrajectoryPointFull',
     Header,
     'body' / c2.Renamed(JointTrajectoryPointFullBody),
     c2.Terminated
@@ -195,13 +190,12 @@ JointTrajectoryPointFull = c2.Struct(
 
 
 JointFeedbackBody = c2.Struct(
-    'JointFeedbackBody',
-    SM_Integer('robot_id'),
+    'robot_id' / SM_Integer,
     'valid_fields'/ ValidFields,
-    Time('time'),
-    JointData('positions', 10),
-    JointData('velocities', 10),
-    JointData('accelerations', 10),
+    'time' / Time,
+    'positions' / JointData( 10),
+    'velocities' / JointData( 10),
+    'accelerations' / JointData( 10),
 )
 
 JointFeedback = c2.Struct(
@@ -228,7 +222,6 @@ msg_type_body_map = {
 SimpleMessage = c2.Struct(
     Header,
     c2.Switch(
-        'body',
         lambda ctx: ctx.header.msg_type,
         msg_type_body_map,
         default = GenericBody
