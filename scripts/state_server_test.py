@@ -19,10 +19,11 @@ import argparse
 import time
 import math
 import sys
-
+import array as ar
+sys.path.append('/Users/joonasadm/Github/simple_message_py/')
 from twisted.internet import reactor, error
-from twisted.internet.endpoints import TCP4ClientEndpoint
-
+from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
+from twisted.python import log
 from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
 
 
@@ -45,6 +46,7 @@ class SimpleMessageClient(object):
             math.degrees(msg.body.joint_data[0])))
 
 
+
 def onStateEpConnect(prot, client):
     prot.registerCallback(StandardMsgTypes.STATUS, client.onRobotStatus)
     prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition)
@@ -52,45 +54,41 @@ def onStateEpConnect(prot, client):
     client._prot = prot
 
 
-def onStateEpConnectErr(err, host, port):
-    sys.stderr.write("Unable to connect to tcp://{}:{}: {}".format(host, port, err))
+def onStateEpConnectErr(err):
+    sys.stderr.write("Unable to connect to host, {} ".format( err))
     err.trap(error.ConnectError)
     reactor.callLater(1, reactor.stop)
 
-
 def main():
     DEFAULT_TIMEOUT=2.0
-
+    log.startLogging(sys.stdout)
+    log.msg('starting')
+    SimProto = protocol.SimpleMessageProtocol
     # parse command line opts
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', action='store_true',
         dest='verbose',help='Be verbose')
-    parser.add_argument('--port', type=int, default=StandardSocketPorts.STATE,
-        help='TCP port to connect to (default: %(default)s)')
-    parser.add_argument('--timeout', type=int, metavar='SEC',
-        default=DEFAULT_TIMEOUT, dest='timeout', help='Connection attempt '
-        'timeout in seconds (default: %(default)s)')
-    parser.add_argument('host', type=str, help="Address or hostname "
-        "of the server")
     args = parser.parse_args()
 
     # create endpoint
-    state_ep = TCP4ClientEndpoint(reactor=reactor, host=args.host,
-                port=args.port, timeout=args.timeout)
-
+    trajData= TCP4ServerEndpoint(reactor=reactor, port=StandardSocketPorts.MOTION, backlog=50)
+    feedback= TCP4ServerEndpoint(reactor=reactor, port=StandardSocketPorts.STATE)
+    print("init")
     # Simple Message client instance for this endpoint
-    client = SimpleMessageClient()
-
-    print ("Trying to connect to tcp://{}:{}".format(args.host, args.port))
+    client= SimpleMessageClient
 
     factory = protocol.SimpleMessageFactory(disable_nagle=True)
-    d = state_ep.connect(protocolFactory=factory)
-
+    f = feedback.listen(protocolFactory=factory)
+    d = trajData.listen(protocolFactory=factory)
+    print("listening motion data")
     # setup callbacks to init client instance on succesfull connection
-    d.addCallback(onStateEpConnect, client)
-    d.addErrback(onStateEpConnectErr, args.host, args.port)
-
-    reactor.run()
+    #d.addCallback(onStateEpConnect, client)
+    #d.addErrback(onStateEpConnectErr, args.host, 11000)""
+    #f.addErrback(onStateEpConnectErr)
+    a = ar.array('d', [0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0])
+    #nulldata =
+    SimProto.sendMsg(StandardMsgTypes.JOINT_FEEDBACK, 1)
+    reactor.run() #@UndefinedVariable
 
 
 if __name__ == "__main__":

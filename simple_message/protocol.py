@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from twisted.internet import task, protocol, defer
-
+from twisted.python import log
 import simple_message as sm
 import construct as c2
 
@@ -50,12 +50,12 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._callbacks = {}
 
     def connectionMade(self):
-        logdebug("Connected")
+        log.msg("Connected")
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
     def connectionLost(self, reason):
-        logdebug("Connection lost: %s", reason)
+        log.msg("Connection lost: %s", reason)
         # handle disconnects properly:
         #  https://jml.io/pages/how-to-disconnect-in-twisted-really.html
 
@@ -65,8 +65,12 @@ class SimpleMessageProtocol(protocol.Protocol):
         This method takes care of all protocol specific aspects of sending
         a message (such as the prefix).
         """
+        log.msg('loading message')
+        log.msg(msg)
         data = sm.SimpleMessage.build(msg)
-        data_len = sm.PktLen(None).build(len(data))
+        log.msg(data)
+        data_len = sm.PktLen.build(len(data))
+        log.msg('sending')
         self.transport.write(data_len + data)
 
     def registerCallback(self, msg_type, cb, single_shot=False):
