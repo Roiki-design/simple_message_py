@@ -24,8 +24,8 @@ sys.path.append('/Users/joonasadm/Github/simple_message_py/')
 from twisted.internet import reactor, error
 from twisted.internet.endpoints import TCP4ClientEndpoint, TCP4ServerEndpoint
 from twisted.python import log
-from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
-
+from simple_message import protocol, StandardSocketPorts, StandardMsgTypes, PktLen
+from simple_message import messages
 
 class SimpleMessageClient(object):
     def __init__(self):
@@ -59,6 +59,34 @@ def onStateEpConnectErr(err):
     err.trap(error.ConnectError)
     reactor.callLater(1, reactor.stop)
 
+
+def feedbackmessage():
+
+    SimpleMessage = c2.Struct(
+        "Header" / c2.Struct(
+            'msg_type' /  Int32sl ,
+            'comm_type' /  Int32sl ,
+            'reply_type' / Int32sl ,
+        ),
+
+        'body' / c2.Struct(
+           'robot_id' / SM_Integer,
+           'valid_fields'/ ValidFields,
+           'time' / Time,
+           'positions' / JointData( 10),
+           'velocities' / JointData( 10),
+           'accelerations' / JointData( 10),
+           ),
+
+        c2.Terminated
+    )
+    a = ar.array('d', [0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0])
+    headerdata = dict(Header=dict(msg_type=15, comm_type=1, reply_type=0),body=dict(robot_id=0, valid_fields=0x02, time=0, positions=a, velocities=a, accelerations=a))
+    data = SimpleMessage.build(headerdata)
+    log.msg(data)
+    data_len = simple_message.PktLen.build(len(data))
+    log.msg("sending")
+    self.transport.write(data_len + data)
 def main():
     DEFAULT_TIMEOUT=2.0
     log.startLogging(sys.stdout)
@@ -77,19 +105,15 @@ def main():
     # Simple Message client instance for this endpoint
     client= SimpleMessageClient
 
-    factory = protocol.SimpleMessageFactory(disable_nagle=True)
-    f = feedback.listen(protocolFactory=factory)
-    d = trajData.listen(protocolFactory=factory)
+    f = feedback.listen(protocol.SimpleMessageFactory(disable_nagle=True))
+    d = trajData.listen(protocol.SimpleMessageFactory(disable_nagle=True))
     print("listening motion data")
     # setup callbacks to init client instance on succesfull connection
     #d.addCallback(onStateEpConnect, client)
     #d.addErrback(onStateEpConnectErr, args.host, 11000)""
     #f.addErrback(onStateEpConnectErr)
-    a = ar.array('d', [0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0, 0.0, 0.0,0.0])
-    #nulldata =
-    SimProto.sendMsg(StandardMsgTypes.JOINT_FEEDBACK, 1)
-    reactor.run() #@UndefinedVariable
 
-
+    reactor.run()
+    feedbackmessage()
 if __name__ == "__main__":
     main()

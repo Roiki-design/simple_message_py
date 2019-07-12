@@ -95,6 +95,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._body_type_callbacks.clear()
 
     def dataReceived(self, data):
+        log.msg("data received")
         self._remainingData += data
         while self._remainingData:
             try:
