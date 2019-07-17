@@ -48,14 +48,17 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._num_msgs_seen = 0
         self._expected_pkt_len = 0
         self._callbacks = {}
+        self.factory=factory
 
     def connectionMade(self):
-        log.msg("Connected")
+        log.msg("Connected: {}".format(self.transport.getPeer()))
+
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
-    def connectionLost(self, reason):
+    def connectionLost(self, connector, reason):
         log.msg("Connection lost: %s", reason)
+        connector.connect()
         # handle disconnects properly:
         #  https://jml.io/pages/how-to-disconnect-in-twisted-really.html
 
@@ -78,6 +81,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         Register a callback to be executed whenever a message of type 'msg_type'
         is received. The callback will receive the entire message when invoked.
         """
+        LOG.MSG("registerCallback: registering '%s' for body type 0x%X")
         logdebug("registerCallback: registering '%s' for body type 0x%X",
             cb.__name__, msg_type)
         self._callbacks.setdefault(msg_type, []).append((cb, single_shot))
@@ -166,7 +170,10 @@ class SimpleMessageProtocol(protocol.Protocol):
 
 
 class SimpleMessageFactory(protocol.Factory):
+    log.msg("factory start")
     protocol = SimpleMessageProtocol
 
     def __init__(self, disable_nagle=False):
         self.disable_nagle = disable_nagle
+    def buildProtocol(self, addr):
+        return SimpleMessageProtocol()
