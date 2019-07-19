@@ -44,21 +44,23 @@ class SimpleMessageProtocol(protocol.Protocol):
 
     def __init__(self):
         self._state = self._S_INIT
-        self._remainingData = ""
+        self._remainingData = bytearray()
         self._num_msgs_seen = 0
         self._expected_pkt_len = 0
         self._callbacks = {}
-        self.factory=factory
+
 
     def connectionMade(self):
         log.msg("Connected: {}".format(self.transport.getPeer()))
-
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
-    def connectionLost(self, connector, reason):
-        log.msg("Connection lost: %s", reason)
-        connector.connect()
+        d=Deferred()
+        d.addCallback(self.registerCallback(StandardMsgTypes.STATUS))
+        d.addCallback(self.registerCallback(StandardMsgTypes.JOINT_POSITION))
+
+    def connectionLost(self, reason):
+        log.msg('Connection lost from {}'.format(self.transport.getPeer()))
         # handle disconnects properly:
         #  https://jml.io/pages/how-to-disconnect-in-twisted-really.html
 
@@ -72,8 +74,8 @@ class SimpleMessageProtocol(protocol.Protocol):
         log.msg(msg)
         data = sm.SimpleMessage.build(msg)
         log.msg(data)
-        data_len = sm.PktLen.build(len(data))
-        log.msg('sending')
+        data_len = c2.Int32sl.build(len(data))
+        log.msg('sending msg')
         self.transport.write(data_len + data)
 
     def registerCallback(self, msg_type, cb, single_shot=False):
@@ -81,7 +83,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         Register a callback to be executed whenever a message of type 'msg_type'
         is received. The callback will receive the entire message when invoked.
         """
-        LOG.MSG("registerCallback: registering '%s' for body type 0x%X")
+        log.msg("registerCallback: registering '%s' for body type 0x%X")
         logdebug("registerCallback: registering '%s' for body type 0x%X",
             cb.__name__, msg_type)
         self._callbacks.setdefault(msg_type, []).append((cb, single_shot))
@@ -100,7 +102,8 @@ class SimpleMessageProtocol(protocol.Protocol):
 
     def dataReceived(self, data):
         log.msg("data received")
-        self._remainingData += data
+        log.msg(data)
+        self._remainingData.extend(data)
         while self._remainingData:
             try:
                 self._consumeData()
@@ -116,7 +119,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         if self._state == self._S_MSG_RCVD:
             self._dispatchMsg()
 
-    _LEN_PKT_LEN = sm.PktLen.sizeof()
+    _LEN_PKT_LEN = c2.Int32sl.sizeof()
 
     def _consumePktLen(self):
         if (len(self._remainingData) < self._LEN_PKT_LEN):
@@ -126,11 +129,12 @@ class SimpleMessageProtocol(protocol.Protocol):
     def _processPktLen(self):
         # get field data from buffer
         data = self._remainingData[:self._LEN_PKT_LEN]
+        msg.log(data)
         self._remainingData = self._remainingData[self._LEN_PKT_LEN:]
 
         # deserialise
-        self._expected_pkt_len = sm.PktLen(None).parse(data)
-
+        self._expected_pkt_len = c2.Int32sl.parse(data)
+        log.msg(self._expected_pkt_len)
         # transition
         self._state = self._S_PKT_LEN_RCVD
 
@@ -146,7 +150,7 @@ class SimpleMessageProtocol(protocol.Protocol):
 
         # deserialise
         self._msg = sm.SimpleMessage.parse(data)
-
+        log.msg(self._msg)
         # transition
         self._num_msgs_seen += 1
         self._expected_pkt_len = 0
@@ -169,11 +173,10 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._state = self._S_INIT
 
 
+
 class SimpleMessageFactory(protocol.Factory):
     log.msg("factory start")
     protocol = SimpleMessageProtocol
 
     def __init__(self, disable_nagle=False):
         self.disable_nagle = disable_nagle
-    def buildProtocol(self, addr):
-        return SimpleMessageProtocol()

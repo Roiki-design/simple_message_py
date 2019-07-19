@@ -112,7 +112,7 @@ GenericBody = c2.GreedyRange('data' / c2.Int8ub)
 
 # generic simple message
 GenericMessage = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(GenericBody),
     c2.Terminated
 )
@@ -123,7 +123,7 @@ PingBody = c2.Struct(
 )
 
 Ping = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(PingBody),
     c2.Terminated
 )
@@ -135,7 +135,7 @@ JointPositionBody = c2.Struct(
 )
 
 JointPosition = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(JointPositionBody),
     c2.Terminated
 )
@@ -149,7 +149,7 @@ JointTrajectoryPointBody = c2.Struct(
 )
 
 JointTrajectoryPoint = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(JointTrajectoryPointBody),
     c2.Terminated
 )
@@ -166,7 +166,7 @@ RobotStatusBody = c2.Struct(
 )
 
 RobotStatus = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(RobotStatusBody),
     c2.Terminated,
 )
@@ -183,7 +183,7 @@ JointTrajectoryPointFullBody = c2.Struct(
 )
 
 JointTrajectoryPointFull = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(JointTrajectoryPointFullBody),
     c2.Terminated
 )
@@ -199,7 +199,7 @@ JointFeedbackBody = c2.Struct(
 )
 
 JointFeedback = c2.Struct(
-    Header,
+    'Header'/ Header,
     'body' / c2.Renamed(JointFeedbackBody),
     c2.Terminated
 )
@@ -220,11 +220,7 @@ msg_type_body_map = {
 
 
 SimpleMessage = c2.Struct(
-    Header,
-    c2.Switch(
-        lambda ctx: ctx.header.msg_type,
-        msg_type_body_map,
-        default = GenericBody
-    ),
+    'Header'/ Header,
+    c2.Switch(lambda ctx: ctx.header.msg_type, msg_type_body_map, default = GenericBody),
     c2.Terminated
 )

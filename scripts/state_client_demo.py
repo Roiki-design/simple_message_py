@@ -22,7 +22,7 @@ import sys
 
 from twisted.internet import reactor, error
 from twisted.internet.endpoints import TCP4ClientEndpoint
-
+from twisted.python import log
 from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
 
 
@@ -89,7 +89,7 @@ def main():
     # setup callbacks to init client instance on succesfull connection
     d.addCallback(onStateEpConnect, client)
     d.addErrback(onStateEpConnectErr, args.host, args.port)
-
+    log.startLogging(sys.stdout)
     reactor.run()
 
 

@@ -22,8 +22,9 @@ import sys
 
 from twisted.internet import reactor, error
 from twisted.internet.endpoints import TCP4ServerEndpoint
-
+from twisted.python import log
 from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
+from simple_message import feedback as fb
 
 
 class SimpleMessageClient(object):
@@ -48,14 +49,14 @@ class SimpleMessageClient(object):
 def onStateEpConnect(prot, client):
     prot.registerCallback(StandardMsgTypes.STATUS, client.onRobotStatus)
     prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition)
-    prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition_ss, single_shot=True)
+    #prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition_ss, single_shot=True)
     client._prot = prot
 
 
-def onStateEpConnectErr(err, port):
-    sys.stderr.write("Unable to connect to tcp {}  {}".format( port, err))
+def onStateEpConnectErr(err):
+    sys.stderr.write("Unable to connect, {}".format( err))
     err.trap(error.ConnectError)
-    reactor.callLater(1, reactor.stop)
+    reactor.callLater(1)
 
 
 def main():
@@ -72,22 +73,19 @@ def main():
     args = parser.parse_args()
 
     # create endpoint
-    state_ep = TCP4ServerEndpoint(reactor=reactor,
-                port=)
-
+    state_ep = TCP4ServerEndpoint(reactor, 11000)
+    feedback = TCP4ServerEndpoint(reactor, 11002)
 
     # Simple Message client instance for this endpoint
     client = SimpleMessageClient()
 
 
-
+    feedbackfactory = fb.feedbackfactory()
     factory = protocol.SimpleMessageFactory(disable_nagle=True)
-    d = state_ep.listen(protocolFactory=factory)
+    state_ep.listen(factory)
+    feedback.listen(feedbackfactory)
     print("listening..")
-    # setup callbacks to init client instance on succesfull connection
-    d.addCallback(onStateEpConnect, client)
-    d.addErrback(onStateEpConnectErr, args.port)
-
+    log.startLogging(sys.stdout)
     reactor.run()
 
 
