@@ -17,6 +17,7 @@ from twisted.internet import task, protocol, defer
 from twisted.python import log
 import simple_message as sm
 import construct as c2
+import io
 
 
 class IncompleteMessageException(Exception):
@@ -175,7 +176,6 @@ class SimpleMessageProtocol(protocol.Protocol):
 
 
 class SimpleMessageFactory(protocol.Factory):
-    log.msg("factory start")
     protocol = SimpleMessageProtocol
 
     def __init__(self, disable_nagle=False):
