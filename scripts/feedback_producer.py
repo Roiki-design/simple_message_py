@@ -27,7 +27,7 @@ class feedbackPublisher(Protocol):
 
     def connectionMade(self):
         print('Connection made from {}'.format(self.transport.getPeer()))
-        self.lc.start(0.5)
+        self.lc.start(2.0)
 
     def connectionLost(self, reason):
         print('Connection lost from {}'.format(self.transport.getPeer()))
@@ -63,7 +63,7 @@ class feedbackPublisher(Protocol):
             c2.Terminated
         )
         msg = dict(
-        Header=dict(msg_type=15, comm_type=1, reply_type=0),
+        Header=dict(msg_type=10, comm_type=1, reply_type=0),
         body=dict(robot_id=0,valid_fields=0x02,time=0,
         positions=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0],
         velocities=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0],

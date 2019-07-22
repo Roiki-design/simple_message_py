@@ -73,7 +73,7 @@ class feedbackfactory(Factory):
 
 
 
-startLogging(stdout)
+
 endpoint=TCP4ClientEndpoint(reactor, 'localhost', 11000)
 endpoint.connect(feedbackfactory())
 reactor.run()

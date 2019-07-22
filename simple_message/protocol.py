@@ -50,20 +50,17 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._expected_pkt_len = 0
         self._callbacks = {}
 
-
     def connectionMade(self):
-        log.msg("Connected: {}".format(self.transport.getPeer()))
+        print("Connected: {}".format(self.transport.getPeer()))
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
-        d=Deferred()
-        d.addCallback(self.registerCallback(StandardMsgTypes.STATUS))
-        d.addCallback(self.registerCallback(StandardMsgTypes.JOINT_POSITION))
 
     def connectionLost(self, reason):
-        log.msg('Connection lost from {}'.format(self.transport.getPeer()))
+        print('Connection lost from {}'.format(self.transport.getPeer()))
         # handle disconnects properly:
         #  https://jml.io/pages/how-to-disconnect-in-twisted-really.html
+
 
     def sendMsg(self, msg):
         """
@@ -71,12 +68,12 @@ class SimpleMessageProtocol(protocol.Protocol):
         This method takes care of all protocol specific aspects of sending
         a message (such as the prefix).
         """
-        log.msg('loading message')
-        log.msg(msg)
+        print('loading message')
+        print(msg)
         data = sm.SimpleMessage.build(msg)
-        log.msg(data)
+        print(data)
         data_len = c2.Int32sl.build(len(data))
-        log.msg('sending msg')
+        print('sending msg')
         self.transport.write(data_len + data)
 
     def registerCallback(self, msg_type, cb, single_shot=False):
@@ -84,7 +81,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         Register a callback to be executed whenever a message of type 'msg_type'
         is received. The callback will receive the entire message when invoked.
         """
-        log.msg("registerCallback: registering '%s' for body type 0x%X")
+        print("registerCallback: registering '%s' for body type 0x%X")
         logdebug("registerCallback: registering '%s' for body type 0x%X",
             cb.__name__, msg_type)
         self._callbacks.setdefault(msg_type, []).append((cb, single_shot))
@@ -102,8 +99,8 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._body_type_callbacks.clear()
 
     def dataReceived(self, data):
-        log.msg("data received")
-        log.msg(data)
+        print("data received")
+        print(data)
         self._remainingData.extend(data)
         while self._remainingData:
             try:
@@ -130,12 +127,12 @@ class SimpleMessageProtocol(protocol.Protocol):
     def _processPktLen(self):
         # get field data from buffer
         data = self._remainingData[:self._LEN_PKT_LEN]
-        msg.log(data)
+        print("packet data: {}".format(data))
         self._remainingData = self._remainingData[self._LEN_PKT_LEN:]
 
         # deserialise
         self._expected_pkt_len = c2.Int32sl.parse(data)
-        log.msg(self._expected_pkt_len)
+        print("expected length: {}".format(self._expected_pkt_len))
         # transition
         self._state = self._S_PKT_LEN_RCVD
 
@@ -147,11 +144,12 @@ class SimpleMessageProtocol(protocol.Protocol):
     def _processMsg(self):
         # get data from buffer
         data = self._remainingData[:self._expected_pkt_len]
+        print("message data: {}".format(data))
         self._remainingData = self._remainingData[self._expected_pkt_len:]
 
         # deserialise
         self._msg = sm.SimpleMessage.parse(data)
-        log.msg(self._msg)
+        print("unpacked: {}".format(self._msg))
         # transition
         self._num_msgs_seen += 1
         self._expected_pkt_len = 0
@@ -159,6 +157,7 @@ class SimpleMessageProtocol(protocol.Protocol):
 
     def _dispatchMsg(self):
         # call registered callbacks based on msg type
+        print("firing callback")
         cbs = self._callbacks.get(self._msg.header.msg_type, [])
         for (cb, single_shot) in cbs:
             try:
@@ -172,6 +171,10 @@ class SimpleMessageProtocol(protocol.Protocol):
 
         # transition
         self._state = self._S_INIT
+
+
+
+
 
 
 

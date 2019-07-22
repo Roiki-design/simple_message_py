@@ -89,7 +89,7 @@ def main():
     # setup callbacks to init client instance on succesfull connection
     d.addCallback(onStateEpConnect, client)
     d.addErrback(onStateEpConnectErr, args.host, args.port)
-    log.startLogging(sys.stdout)
+    
     reactor.run()
 
 

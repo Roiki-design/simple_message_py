@@ -20,14 +20,13 @@ import time
 import math
 import sys
 
-from twisted.internet import reactor, error
+from twisted.internet import reactor, error, defer
 from twisted.internet.endpoints import TCP4ServerEndpoint
-from twisted.python import log
 from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
 from simple_message import feedback as fb
 
 
-class SimpleMessageClient(object):
+class SimpleMessageServer(object):
     def __init__(self):
         self._prot = None
 
@@ -60,24 +59,13 @@ def onStateEpConnectErr(err):
 
 
 def main():
-    DEFAULT_TIMEOUT=2.0
-
-    # parse command line opts
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '--verbose', action='store_true',
-        dest='verbose',help='Be verbose')
-    parser.add_argument('--port', type=int, default=StandardSocketPorts.MOTION,
-        help='TCP port to connect to (default: %(default)s)')
-
-
-    args = parser.parse_args()
 
     # create endpoint
     state_ep = TCP4ServerEndpoint(reactor, 11000)
     feedback = TCP4ServerEndpoint(reactor, 11002)
 
     # Simple Message client instance for this endpoint
-    client = SimpleMessageClient()
+    client = SimpleMessageServer()
 
 
     feedbackfactory = fb.feedbackfactory()
@@ -85,7 +73,6 @@ def main():
     state_ep.listen(factory)
     feedback.listen(feedbackfactory)
     print("listening..")
-    log.startLogging(sys.stdout)
     reactor.run()
 
 
