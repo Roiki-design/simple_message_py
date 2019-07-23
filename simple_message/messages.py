@@ -221,6 +221,6 @@ msg_type_body_map = {
 
 SimpleMessage = c2.Struct(
     'header'/ Header,
-    c2.Switch(lambda ctx: ctx.header.msg_type, msg_type_body_map, default = GenericBody),
+    'data' / c2.Switch(lambda ctx: ctx.header.msg_type, msg_type_body_map, default = GenericBody),
     c2.Terminated
 )

@@ -52,12 +52,14 @@ class SimpleMessageProtocol(protocol.Protocol):
 
     def connectionMade(self):
         print("Connected: {}".format(self.transport.getPeer()))
+        self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.joint_message_callback)
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
 
     def connectionLost(self, reason):
         print('Connection lost from {}'.format(self.transport.getPeer()))
+        self.purgeAllCallbacks()
         # handle disconnects properly:
         #  https://jml.io/pages/how-to-disconnect-in-twisted-really.html
 
@@ -96,11 +98,11 @@ class SimpleMessageProtocol(protocol.Protocol):
         """
         Remove all registered callbacks for all pkt types.
         """
-        self._body_type_callbacks.clear()
+        self._callbacks.clear()
 
     def dataReceived(self, data):
-        print("data received")
-        print(data)
+        print("data received. {}".format(data))
+
         self._remainingData.extend(data)
         while self._remainingData:
             try:
@@ -173,8 +175,9 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._state = self._S_INIT
 
 
-
-
+    def joint_message_callback(self):
+        reply = dict(Header=dict(msg_type=10, comm_type=3, reply_type=1),body=dict())
+        self.sendMsg(reply)
 
 
 
