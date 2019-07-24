@@ -13,10 +13,18 @@ from twisted.protocols.basic import LineReceiver
 
 
 class feedbackPublisher(Protocol):
+
     def __init__(self):
         self.lc = task.LoopingCall(self.FeedbackMessage)
         self.lc1 = task.LoopingCall(self.StatusMessage)
         self.data = {}
+        self.drives_powered = 0
+        self.e_stopped = 0
+        self.error_code = 0
+        self.in_error = 0
+        self.in_motion = 0
+        self.mode = 0
+        self.motion_possible = 0
 
     def connectionMade(self):
         print('Connection made from {}'.format(self.transport.getPeer()))
@@ -49,22 +57,15 @@ class feedbackPublisher(Protocol):
                 'reply_type' / c2.Int32sl,
             ),
             'body' / c2.Struct(
-                'robot_id' / c2.Int32sl,
-                'valid_fields'/ c2.Int32sl,
-                'time' / c2.Float32b,
-                'positions' / c2.Float32b[10],
-                'velocities' / c2.Float32b[10],
-                'accelerations' / c2.Float32b[10],
+                'seq_nr' / c2.Int32sl ,
+                'joint_data'/ c2.Float32b[10]
             ),
             c2.Terminated
         )
         msg = dict(
         Header=dict(msg_type=10, comm_type=1, reply_type=0),
-        body=dict(robot_id=0,valid_fields=0x02,time=0,
-        positions=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0],
-        velocities=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0],
-        accelerations=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0]),
-        )
+        body=dict(seq_nr=0,joint_data=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0]
+        ))
         feedback_data = SimpleMessage.build(msg)
         #print(feedback_data)
         data_len = c2.Int32sl.build(len(feedback_data))
@@ -91,9 +92,20 @@ class feedbackPublisher(Protocol):
                     c2.Terminated
                 )
 
+                self.mode = 2
+                self.drives_powered = 1
+                self.motion_possible = 1
+
                 msg = dict(
                 Header=dict(msg_type=13, comm_type=1, reply_type=0),
-                body=dict(drives_powered=1,e_stopped=0,error_code=0, in_error=0,in_motion=0,mode=2, motion_possible=1))
+                body=dict(drives_powered= self.drives_powered,
+                e_stopped=self.e_stopped,
+                error_code= self.error_code,
+                in_error=self.in_error,
+                in_motion=self.in_motion,
+                mode=self.mode,
+                motion_possible=self.motion_possible
+                ))
                 status_data = StatusMessage.build(msg)
                 #print(status_data)
                 data_len = c2.Int32sl.build(len(status_data))

@@ -18,7 +18,9 @@ from twisted.python import log
 import simple_message as sm
 import construct as c2
 import io
-
+import collections
+import copy
+import math
 
 class IncompleteMessageException(Exception):
     """
@@ -49,10 +51,12 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._num_msgs_seen = 0
         self._expected_pkt_len = 0
         self._callbacks = {}
+        self.joint_message = {}
 
     def connectionMade(self):
         print("Connected: {}".format(self.transport.getPeer()))
         self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.joint_message_callback)
+        self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.jointAngles)
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
 
@@ -70,12 +74,12 @@ class SimpleMessageProtocol(protocol.Protocol):
         This method takes care of all protocol specific aspects of sending
         a message (such as the prefix).
         """
-        print('loading message')
-        print(msg)
+        #print('loading message')
+        #print(msg)
         data = sm.SimpleMessage.build(msg)
-        print(data)
+        #print(data)
         data_len = c2.Int32sl.build(len(data))
-        print('sending msg')
+        #print('sending msg')
         self.transport.write(data_len + data)
 
     def registerCallback(self, msg_type, cb, single_shot=False):
@@ -83,9 +87,8 @@ class SimpleMessageProtocol(protocol.Protocol):
         Register a callback to be executed whenever a message of type 'msg_type'
         is received. The callback will receive the entire message when invoked.
         """
-        print("registerCallback: registering '%s' for body type 0x%X")
-        logdebug("registerCallback: registering '%s' for body type 0x%X",
-            cb.__name__, msg_type)
+        #print("registerCallback: registering '%s' for body type 0x%X")
+        logdebug("registerCallback: registering '%s' for body type 0x%X",cb, msg_type)
         self._callbacks.setdefault(msg_type, []).append((cb, single_shot))
 
     def purgeCallbacks(self, msg_type):
@@ -101,7 +104,7 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._callbacks.clear()
 
     def dataReceived(self, data):
-        print("data received. {}".format(data))
+        #print("data received. {}".format(data))
 
         self._remainingData.extend(data)
         while self._remainingData:
@@ -129,12 +132,12 @@ class SimpleMessageProtocol(protocol.Protocol):
     def _processPktLen(self):
         # get field data from buffer
         data = self._remainingData[:self._LEN_PKT_LEN]
-        print("packet data: {}".format(data))
+        #print("packet data: {}".format(data))
         self._remainingData = self._remainingData[self._LEN_PKT_LEN:]
 
         # deserialise
         self._expected_pkt_len = c2.Int32sl.parse(data)
-        print("expected length: {}".format(self._expected_pkt_len))
+        #print("expected length: {}".format(self._expected_pkt_len))
         # transition
         self._state = self._S_PKT_LEN_RCVD
 
@@ -146,12 +149,13 @@ class SimpleMessageProtocol(protocol.Protocol):
     def _processMsg(self):
         # get data from buffer
         data = self._remainingData[:self._expected_pkt_len]
-        print("message data: {}".format(data))
+        #print("message data: {}".format(data))
         self._remainingData = self._remainingData[self._expected_pkt_len:]
 
         # deserialise
         self._msg = sm.SimpleMessage.parse(data)
-        print("unpacked: {}".format(self._msg))
+        #Sprint("unpacked: {}".format(self._msg))
+        self.joint_message = self._msg
         # transition
         self._num_msgs_seen += 1
         self._expected_pkt_len = 0
@@ -168,16 +172,46 @@ class SimpleMessageProtocol(protocol.Protocol):
                     cbs.remove((cb, single_shot))
                 cb(self._msg)
             except Exception as e:
-                logwarn("Exception caught executing callback '%s': %s",
-                    cb.__name__, e)
+                logwarn("Exception caught executing callback '%s': %s",cb, e)
 
         # transition
         self._state = self._S_INIT
 
+    def makehash():
+        return collections.defaultdict(makehash)
 
-    def joint_message_callback(self):
-        reply = dict(Header=dict(msg_type=10, comm_type=3, reply_type=1),body=dict())
-        self.sendMsg(reply)
+    def joint_message_callback(self, msg):
+        print("callback called")
+        response = copy.deepcopy(msg)
+        #print(response)
+        if  any(response) != False:
+            response["header"]["comm_type"] = 3
+            response["header"]["reply_type"] = 1
+            #print(response)
+            reply = response
+            self.sendMsg(reply)
+
+    def jointAngles(self, msg):
+        if any(msg) != False:
+            #print(msg)
+            joints =msg["data"]["joint_data"]
+            print(joints)
+            sq = msg["data"]["seq_nr"]
+            joint_1 = joints[1]
+            joint_2 = joints[2]
+            joint_3 = joints[3]
+            joint_4 = joints[4]
+            joint_5 = joints[5]
+            joint_6 = joints[6]
+
+            print("Sequence: {}".format(sq))
+            print("joint 1: {}".format(math.degrees(joint_1)))
+            print("joint 2: {}".format(math.degrees(joint_2)))
+            print("joint 3: {}".format(math.degrees(joint_3)))
+            print("joint 4: {}".format(math.degrees(joint_4)))
+            print("joint 5: {}".format(math.degrees(joint_5)))
+            print("joint 6: {}".format(math.degrees(joint_6)))
+
 
 
 
