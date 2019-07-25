@@ -15,7 +15,7 @@ from twisted.protocols.basic import LineReceiver
 class feedbackPublisher(Protocol):
 
     def __init__(self):
-        self.lc = task.LoopingCall(self.FeedbackMessage)
+        self.lc = task.LoopingCall(self.FeedbackMessage) #add both feedback and status as loops to a connection
         self.lc1 = task.LoopingCall(self.StatusMessage)
         self.data = {}
         self.drives_powered = 0
@@ -28,13 +28,13 @@ class feedbackPublisher(Protocol):
 
     def connectionMade(self):
         print('Connection made from {}'.format(self.transport.getPeer()))
-        self.lc.start(0.5)
+        self.lc.start(0.5)                          #Start loops on intervals
         self.lc1.start(3.0)
         print("starting feedback")
 
     def connectionLost(self, reason):
         print('Connection lost from {}'.format(self.transport.getPeer()))
-        self.lc.stop()
+        self.lc.stop()                          #Stop loops on disconnect
         self.lc1.stop()
         print("Stopping feedback")
 
@@ -43,6 +43,7 @@ class feedbackPublisher(Protocol):
         print(data)
 
     def FeedbackMessage(self):
+        #create a feedback message we populate and send
         joint_1 = 0.0
         joint_2 = 0.0
         joint_3 = 0.0
@@ -61,7 +62,7 @@ class feedbackPublisher(Protocol):
                 'joint_data'/ c2.Float32b[10]
             ),
             c2.Terminated
-        )
+        )                                           #packa a message.
         msg = dict(
         Header=dict(msg_type=10, comm_type=1, reply_type=0),
         body=dict(seq_nr=0,joint_data=[joint_1, joint_2, joint_3, joint_4, joint_5, joint_6,0.0,0.0,0.0,0.0]
@@ -73,7 +74,7 @@ class feedbackPublisher(Protocol):
         self.transport.write(data_len + feedback_data)
 
     def StatusMessage(self):
-
+                #Create a statusmessage that we populate and send
                 StatusMessage = c2.Struct(
                     'Header' / c2.Struct(
                         'msg_type' / c2.Int32sl,

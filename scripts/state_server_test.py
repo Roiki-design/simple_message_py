@@ -25,39 +25,7 @@ from twisted.internet.endpoints import TCP4ServerEndpoint
 from simple_message import protocol, StandardSocketPorts, StandardMsgTypes
 from simple_message import feedback as fb
 
-
-class SimpleMessageServer(object):
-    def __init__(self):
-        self._prot = None
-
-    def onRobotStatus(self, msg):
-        if (msg.body.in_error):
-            print ("Robot error: {}".format(msg.body.error_code))
-
-    def onJointPosition(self, msg):
-        print ("joint0: {:6.3f} rad ({:6.3f} deg)".format(
-            msg.body.joint_data[0],
-            math.degrees(msg.body.joint_data[0])))
-
-    def onJointPosition_ss(self, msg):
-        print ("SINGLE_SHOT: joint0: {:6.3f} rad ({:6.3f} deg)".format(
-            msg.body.joint_data[0],
-            math.degrees(msg.body.joint_data[0])))
-
-
-def onStateEpConnect(prot, client):
-    prot.registerCallback(StandardMsgTypes.STATUS, client.onRobotStatus)
-    prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition)
-    #prot.registerCallback(StandardMsgTypes.JOINT_POSITION, client.onJointPosition_ss, single_shot=True)
-    client._prot = prot
-
-
-def onStateEpConnectErr(err):
-    sys.stderr.write("Unable to connect, {}".format( err))
-    err.trap(error.ConnectError)
-    reactor.callLater(1)
-
-
+# create servers and sart them.
 def main():
 
     # create endpoint

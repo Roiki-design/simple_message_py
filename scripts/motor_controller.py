@@ -6,97 +6,151 @@
 """
 Simple Message feedback publisher. The server waits for connection and then starts publishing roboto feedback information.
 """
-
-from __future__ import print_function
-
 from sys import stdout
+import time
 from twisted.python.log import startLogging
 from twisted.internet import interfaces, reactor, task, defer, protocol
 from twisted.internet.protocol import Factory, Protocol
 from twisted.internet.endpoints import TCP4ServerEndpoint
+import queue
 import construct as c2
 import simple_message as sm
+from simple_message import protocol as p2
 from twisted.protocols.basic import LineReceiver
+from twisted.internet.task import LoopingCall
+#from PoKeys import *
 
-Motor1 =
-Motor2a =
-Motor2b =
-Motor3 =
-Motor4
-Motor5
-Motor6
 
 class Motorcontroller(LineReceiver):
+
+    remote_connected = False
+    motors_powered = False
+    Error = False
+
     def __init__(self):
-        self.remote_connected = False
-        self.motors_powered = False
-        self.Error = False
         self.factory = factory
+        self.loop = LoopingCall(self.send_to_motors)
 
     def connectionMade(self):
         print('Connection made from {}'.format(self.transport.getPeer()))
         if self.factory.motors.get(self.transport.getPeer()) != None:
             self.factory.motors[self.transport.getpeer()] = True
+            self.loop.start(0.01)
         else:
             print("Connection not in database")
 
     def connectionLost(self, reason):
         print('Connection lost from {}'.format(self.transport.getPeer()))
-        self.factory.motors.[self.transport.getPeer()] = False
+        self.factory.motors[self.transport.getPeer()] = False
+        self.loop.stop()
 
     def lineReceived(self):
         print("got message")
 
-    def sendMsg(self , joint):
-        if monitoring.msg_recv == True:
-            self.factory.motors[].transport.sendLine()
+    def send_to_motors(self):
+        if self.transport.getPeer() == "10.0.0.11" and self.Error==False:
+            motor_functions.motor1()
+        elif self.transport.getPeer() == "10.0.0.12" and self.Error==False:
+            motor_functions.motor_2a()
+        elif self.transport.getPeer() == "10.0.0.13" and self.Error==False:
+            motor_functions.motor_2b()
+        elif self.transport.getPeer() == "10.0.0.14" and self.Error==False:
+            motor_functions.motor_3()
+        elif self.transport.getPeer() == "10.0.0.15" and self.Error==False:
+            motor_functions.motor_4()
+        elif self.transport.getPeer() == "10.0.0.16" and self.Error==False:
+            motor_functions.motor_5()
+        elif self.transport.getPeer() == "10.0.0.17" and self.Error==False:
+            motor_functions.motor_6()
+        else:
+            pass
 
-class monitoring(thread):
+class motor_functions(object):
+
+    def motor_1(self):
+        while monitoring.joint1_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+            angle=monitoring.joint1_queue.get()
+            self.transport.sendline(angle)
+        else:
+            pass
+    def motor_2a(self):
+        while monitoring.joint2_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+            angle=monitoring.joint1_queue.get()
+            self.transport.sendline(angle)
+        else:
+            pass
+    def motor_2b(self):
+        while monitoring.joint2_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+            angle=monitoring.joint1_queue.get()
+            self.transport.sendline(angle)
+        else:
+            pass
+    def motor_3(self):
+     while monitoring.joint3_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+         angle=monitoring.joint1_queue.get()
+         self.transport.sendline(angle)
+     else:
+        pass
+
+    def motor_4(self):
+        while monitoring.joint4_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+            angle=monitoring.joint1_queue.get()
+            self.transport.sendline(angle)
+        else:
+            pass
+
+    def motor_5(self):
+     while monitoring.joint5_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+         angle=monitoring.joint1_queue.get()
+         self.transport.sendline(angle)
+     else:
+        pass
+    def motor_6(self):
+     while monitoring.joint6_queue.empty() == False and p2.SimpleMessageProtocol.e_stopped != 0 :
+         angle=monitoring.joint1_queue.get()
+         self.transport.sendline(angle)
+     else:
+        pass
+
+class monitoring():
 
     def __init__(self):
-        self.old_message = None
-        self.joint_1 = 0.0
-        self.joint_2 = 0.0
-        self.joint_3 = 0.0
-        self.joint_4 = 0.0
-        self.joint_5 = 0.0
-        self.joint_6 = 0.0
-        self.msg_recv = False
+        self.joint1_queue = queue.Queue()
+        self.joint2_queue = queue.Queue()
+        self.joint3_queue = queue.Queue()
+        self.joint4_queue = queue.Queue()
+        self.joint5_queue = queue.Queue()
+        self.joint6_queue = queue.Queue()
 
-    def message_monitor(self):
-        message = SimpleMessageProtocol.jointMessage
-        if message != self.old_message:
-            self.joint_1 = message(['body']['Joint Data']['J0'])
-            self.joint_2 = message(['body']['Joint Data']['J1'])
-            self.joint_3 = message(['body']['Joint Data']['J2'])
-            self.joint_4 = message(['body']['Joint Data']['J3'])
-            self.joint_5 = message(['body']['Joint Data']['J4'])
-            self.joint_6 = message(['body']['Joint Data']['J5'])
-            self.old_message = message
-            self.msg_recv = True
-        else:
-            break
+    def assign_to_queue():
+        if any(p2.SimpleMessageProtocol.trajectoryPoint_store) != False:
+            for key in p2.SimpleMessageProtocol.trajectoryPoint_store.items():
+                self.joint1_queue.put(val[0])
+                self.joint2_queue.put(val[1])
+                self.joint3_queue.put(val[2])
+                self.joint4_queue.put(val[3])
+                self.joint5_queue.put(val[4])
+                self.joint6_queue.put(val[5])
 
 
-class to_motors(thread):
 
-    def send_to_motors(self):
-        if msg_recv=True:
-            sendLine(monitoring.joint_1)
+    while True:
+        assign_to_queue()
 
 
 class feedbackfactory(Factory):
-    protocol = feedbackPublisher
+    protocol = Motorcontroller
     def __init__(self):
         self.motors =	{
-        10.0.0.10: False, #Remote
-        10.0.0.11: False, #Motor1
-        10.0.0.12: False, #Motor2a
-        10.0.0.13: False, #Motor2b
-        10.0.0.14: False, #Motor3
-        10.0.0.15: False, #Motor4
-        10.0.0.16: False, #Motor5
-        10.0.0.17: False #Motor6
+        "10.0.0.10": False, #Remote
+        "10.0.0.11": False, #Motor1
+        "10.0.0.12": False, #Motor2a
+        "10.0.0.13": False, #Motor2b
+        "10.0.0.14": False, #Motor3
+        "10.0.0.15": False, #Motor4
+        "10.0.0.16": False, #Motor5
+        "10.0.0.17": False #Motor6
+        #10.0.0.18: False #Track
        }
 
 factory=feedbackfactory()

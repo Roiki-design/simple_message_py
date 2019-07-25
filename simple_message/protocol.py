@@ -53,9 +53,10 @@ class SimpleMessageProtocol(protocol.Protocol):
         self._callbacks = {}
         self.joint_message = {}
 
+
     def connectionMade(self):
         print("Connected: {}".format(self.transport.getPeer()))
-        self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.joint_message_callback)
+        self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.joint_message_callback) #add callbacks to joint messages on connect
         self.registerCallback(sm.StandardMsgTypes.JOINT_TRAJ_PT, self.jointAngles)
         if self.factory.disable_nagle:
             self.transport.setTcpNoDelay(enabled=True)
@@ -163,7 +164,7 @@ class SimpleMessageProtocol(protocol.Protocol):
 
     def _dispatchMsg(self):
         # call registered callbacks based on msg type
-        print("firing callback")
+        #print("firing callback")
         cbs = self._callbacks.get(self._msg.header.msg_type, [])
         for (cb, single_shot) in cbs:
             try:
@@ -181,38 +182,49 @@ class SimpleMessageProtocol(protocol.Protocol):
         return collections.defaultdict(makehash)
 
     def joint_message_callback(self, msg):
-        print("callback called")
-        response = copy.deepcopy(msg)
+        #print("callback called")
+        response = copy.deepcopy(msg) #create a copy of the message
         #print(response)
         if  any(response) != False:
-            response["header"]["comm_type"] = 3
+            response["header"]["comm_type"] = 3  #Modify the headers
             response["header"]["reply_type"] = 1
             #print(response)
-            reply = response
+            reply = response                    # send the message back
             self.sendMsg(reply)
 
     def jointAngles(self, msg):
-        if any(msg) != False:
+                                        #callback to get joint angles from the received message.
+            if any(msg) != False:                        #If message not empty
             #print(msg)
-            joints =msg["data"]["joint_data"]
-            print(joints)
-            sq = msg["data"]["seq_nr"]
-            joint_1 = joints[1]
-            joint_2 = joints[2]
-            joint_3 = joints[3]
-            joint_4 = joints[4]
-            joint_5 = joints[5]
-            joint_6 = joints[6]
+                joints = msg["data"]["joint_data"]        #get joint values as list
+            #print(joints)
+                sq = msg["data"]["seq_nr"]               #get sequence number
+                if sq == -1 or -4:                       # If seqeuce is negative, we clear the trajectory point array.
+                    self.factory.trajectoryPoint_store.clear()
+                    print("clear trajectory points")
+                    if sq == -2:
+                        self.motion_possible = 0             #Disable motion when stop is called
 
-            print("Sequence: {}".format(sq))
-            print("joint 1: {}".format(math.degrees(joint_1)))
-            print("joint 2: {}".format(math.degrees(joint_2)))
-            print("joint 3: {}".format(math.degrees(joint_3)))
-            print("joint 4: {}".format(math.degrees(joint_4)))
-            print("joint 5: {}".format(math.degrees(joint_5)))
-            print("joint 6: {}".format(math.degrees(joint_6)))
+                    joint_1 = round(math.degrees(joints[0]),3)      # get joint values and convert to degrees and round
+                    joint_2 = round(math.degrees(joints[1]),3)
+                    joint_3 = round(math.degrees(joints[2]),3)
+                    joint_4 = round(math.degrees(joints[3]),3)
+                    joint_5 = round(math.degrees(joints[4]),3)
+                    joint_6 = round(math.degrees(joints[5]),3)
 
 
+                    print("---------------------------------------------")
+                    print("Sequence: {}".format(sq))
+                    print("joint 1: {}".format(math.degrees(joint_1)))  # Print for debugging
+                    print("joint 2: {}".format(math.degrees(joint_2)))
+                    print("joint 3: {}".format(math.degrees(joint_3)))
+                    print("joint 4: {}".format(math.degrees(joint_4)))
+                    print("joint 5: {}".format(math.degrees(joint_5)))
+                    print("joint 6: {}".format(math.degrees(joint_6)))
+
+
+                    pointlist = [joint_1, joint_2, joint_3, joint_4, joint_5, joint_6]  #create a list of trajectory poins and add then to a dict
+                    self.factory.trajectoryPoint_store.update({sq : pointlist})
 
 
 class SimpleMessageFactory(protocol.Factory):
@@ -220,3 +232,4 @@ class SimpleMessageFactory(protocol.Factory):
 
     def __init__(self, disable_nagle=False):
         self.disable_nagle = disable_nagle
+        self.trajectoryPoint_store ={}
